@@ -9,8 +9,8 @@ fake = Faker('ru-RU')  # объект класса с русским набор 
 
 def define_cart(new_cart):
     """
-    Получает карту, и возвращает множество номеров из нее
-    :param new_cart: карта с номерами
+    Получает карту, и возвращает множество номеров из нее.
+    :param new_cart: карта с номерами.
     :return: множество номеров карты
     """
     eq = set()
@@ -63,7 +63,7 @@ class Cart:
     @property
     def is_empty(self):
         """
-        Проверка на отсутствие цифр в карточке
+        Проверка на отсутствие цифр в карточке.
         :return: bool
         """
         return len(define_cart(self.cart)) == 0
@@ -79,7 +79,7 @@ class Cart:
     def cross_out(self, num):
         """
         Замена числа в карточке на символ "-"
-        :param num: номер для поиска
+        :param num: номер для поиска.
         :return: все изменения производятся в картоке
         """
         for item in self.cart:
@@ -90,7 +90,7 @@ class Cart:
             except ValueError:
                 pass
 
-    def out_print(self):
+    def __str__(self):
         """
         Подготовка карточки для вывода на экран.
         :return: стока для вывода
@@ -103,6 +103,12 @@ class Cart:
             s += '|\n'
         s += ' ' + '-' * 30 + '\n'
         return s
+
+    def __eq__(self, other):
+        if isinstance(other, Cart):
+            cart1 = define_cart(self.cart)
+            cart2 = define_cart(other.cart)
+            return len(cart1) == len(cart2) and cart1 == cart2
 
 
 class PlayerComp:
@@ -123,7 +129,7 @@ class PlayerComp:
         :param num: номер бочонка
         :return: bool
         """
-        print(self.cart.out_print())
+        print(self.cart)
         if self.cart.is_num_to_cart(num):
             self.cart.cross_out(num)
             print('Номер есть')
@@ -142,7 +148,7 @@ class PlayerHuman:
         print(f'Имя игрока: {self.name}')
 
     def step(self, num):
-        print(self.cart.out_print())
+        print(self.cart)
         ans = input('Зачеркнуть цифру (Д/Н)? ')
         while ans not in 'ДдНн':
             ans = input('Некорректный ввод. Зачеркнуть цифру (Д/Н)? ')
@@ -172,6 +178,9 @@ class Game:
         """
         self.player1 = None
         self.player2 = None
+        self.exit = self.menu()
+        self.winner = None
+        self.loser = None
 
     def menu(self):
         """
@@ -179,62 +188,65 @@ class Game:
         :return: номер пункта
         """
         mtext = """
-        
+
         1. Один игрок с компьютером
         2. 2 игрока
         3. 2 Компьютера
         4. Выход
-        
+
         """
         print(mtext)
         n = input('Введите номер пункта: ')
         while n not in '1234':
             n = input('Некорректный ввод. Введите номер пункта: ')
-        return int(n)
+        if n == '1':
+            self.player1 = PlayerHuman()
+            self.player2 = PlayerComp()
+        elif n == '2':
+            self.player1 = PlayerHuman()
+            self.player2 = PlayerHuman()
+        elif n == '3':
+            self.player1 = PlayerComp()
+            self.player2 = PlayerComp()
+        else:
+            print('Выбран выход')
+            return True
+        return False
 
     def start(self):
         """
         Процесс игры
         """
-        n = self.menu()
-        if n == 1:
-            self.player1 = PlayerHuman()
-            self.player2 = PlayerComp()
-        elif n == 2:
-            self.player1 = PlayerHuman()
-            self.player2 = PlayerHuman()
-
-        elif n == 3:
-            self.player1 = PlayerComp()
-            self.player2 = PlayerComp()
-        else:
-            print('Выбран выход')
-            return None
+        step1, step2 = False, False
         num = sample(self.bag, k=1)
         print(f'Выпал бочонок: {num[0]}')
         self.bag.remove(num[0])
         while not (self.player1.cart.is_empty or self.player2.cart.is_empty):
             step1 = self.player1.step(num[0])
             step2 = self.player2.step(num[0])
-            if not step1 or not step2:
+            if not (step1 and step2 and len(self.bag)):
                 break
             num = sample(self.bag, k=1)
             print(f'Выпал бочонок: {num[0]}')
             self.bag.remove(num[0])
         if self.player1.cart.is_empty or not step1:
-            loser = self.player1
-            winner = self.player2
+            self.winner = self.player1.name
+            self.loser = self.player2.name
+        elif self.player2.cart.is_empty or not step2:
+            self.loser = self.player1.name
+            self.winner = self.player2.name
         else:
-            loser = self.player1
-            winner = self.player2
+            print('Все бочонки вынуты')
+            return
         print()
-        print("_"*40)
-        print(f"Победитель: {winner.name}")
-        print("_"*40)
-        print(f'{loser.name} сегодня не выиграл')
+        print("_" * 40)
+        print(f"Победитель: {self.winner}")
+        print("_" * 40)
+        print(f'{self.loser} сегодня не выиграл')
 
 
 if __name__ == '__main__':
     # запуск игры
     game = Game()
-    game.start()
+    if not game.exit:
+        game.start()
